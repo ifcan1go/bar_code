@@ -4,7 +4,7 @@ import numpy
 import os
 
 
-def find_range(img, threshold=0.085):
+def find_range(img, threshold=0.105 ):
     sub_img = numpy.abs(img[:-1] - img[1:]) / (img[1:] + 1)
     img_use = numpy.where(sub_img > threshold, sub_img, 0)
     points = []
@@ -28,6 +28,7 @@ def padding(img, points):
     range_begin = 0
     new_img = numpy.zeros(img.shape)
     img_range = []
+    white_bar=[]
     for i, point in enumerate(points):
         range_end = point
         img_range.append([range_begin, range_end])
@@ -39,10 +40,11 @@ def padding(img, points):
         this_color = numpy.mean(img[img_range[i + 1][0]:img_range[i + 1][1]])
         if this_color > adjacent_color:
             new_img[img_range[i + 1][0]:img_range[i + 1][1]] = 255
+            white_bar.append([img_range[i + 1][0],img_range[i + 1][1]])
         else:
             new_img[img_range[i + 1][0]:img_range[i + 1][1]] = 0
 
-    return new_img
+    return new_img,white_bar
 
 
 def bar_code(img_path, img_name, output_path):
@@ -53,14 +55,17 @@ def bar_code(img_path, img_name, output_path):
     img_point = numpy.zeros(img.shape[0])
     for i in points:
         img_point[i] = 1
-    new_img = padding(img, points)
+    new_img,white_bar = padding(img, points)
     new_img = new_img.reshape(new_img.shape[0], 1)
     new_img = numpy.repeat(new_img, 35, axis=1)
     output_name = os.path.join(output_path, img_name)
     cv2.imwrite(output_name, new_img)
+    return white_bar
 
 if __name__ == '__main__':
     img_path = '01lane'
     output_path = 'output'
-    for i in range(15):
-       bar_code(img_path,'01lane_%i.bmp'%(i+1),output_path)
+    with open(os.path.join(output_path, 'white_bar_location.txt'), 'wb+') as f:
+        for i in range(15):
+            white_bar=bar_code(img_path,'01lane_%i.bmp'%(i+1),output_path)
+            f.write(('01lane_%i:'%(i+1)+str(white_bar)+'\n').encode("utf-8"))
