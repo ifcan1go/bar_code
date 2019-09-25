@@ -19,98 +19,86 @@ def find_bars(img):
             b_start = i
             w_end = i
             w_b = 0
-            white_bar.append([w_start,w_end])
+            white_bar.append([w_start, w_end])
         if i == img.shape[0] - 1:
-            white_bar.append([w_start,i])
+            white_bar.append([w_start, i])
     return numpy.asarray(white_bar), numpy.asarray(black_bar)
 
 
-def Adjusting_length(img, new_img, img_Contrast):
-    constrast_length = img_Contrast.shape[0]
-    img_length = img.shape[0]
-    if constrast_length == img_length:
-        return img, new_img
-    elif img_length > constrast_length:
-        sub_length = img_length - constrast_length
-        for i in range(sub_length):
-            sub_position = int((sub_length - i - 1) * img_length / (img_length - constrast_length))
-            while new_img[sub_position] == 0:
-                sub_position += 1
-            img = numpy.delete(img, sub_position)
-            new_img = numpy.delete(new_img, sub_position)
-    elif img_length < constrast_length:
-        add_length = constrast_length - img_length
-        for i in range(add_length):
-            add_position = int(i * img_length / (constrast_length - img_length))
-            img = numpy.insert(img, add_position, img[add_position])
-            new_img = numpy.insert(new_img, add_position, new_img[add_position])
-    return img, new_img
+# def Adjusting_length(img, new_img, img_Contrast):
+#     constrast_length = img_Contrast.shape[0]
+#     img_length = img.shape[0]
+#     if constrast_length == img_length:
+#         return img, new_img
+#     elif img_length > constrast_length:
+#         sub_length = img_length - constrast_length
+#         for i in range(sub_length):
+#             sub_position = int((sub_length - i - 1) * img_length / (img_length - constrast_length))
+#             while new_img[sub_position] == 0:
+#                 sub_position += 1
+#             img = numpy.delete(img, sub_position)
+#             new_img = numpy.delete(new_img, sub_position)
+#     elif img_length < constrast_length:
+#         add_length = constrast_length - img_length
+#         for i in range(add_length):
+#             add_position = int(i * img_length / (constrast_length - img_length))
+#             img = numpy.insert(img, add_position, img[add_position])
+#             new_img = numpy.insert(new_img, add_position, new_img[add_position])
+#     return img, new_img
 
 
-def Adjusting_bar(img, new_img, black_bar, white_bar, black_bar_Contrast, img_Contrast):
+def Adjusting_bar(black_bar, white_bar, black_bar_Contrast):
     if not len(black_bar) == len(black_bar_Contrast):
         raise ("BAR Detective ERROR")
     adjust_list = []
-    for i in range(len(black_bar)):
-        bar = black_bar[i]
-        bar_contrast = black_bar_Contrast[i]
-        if bar == bar_contrast:
-            pass
-        elif bar > bar_contrast:
-            for i in range(len(white_bar)):
-                if white_bar[i] > bar:
-                    add_position = white_bar[i - 1]
-            for i in range(bar - bar_contrast):
-                img = numpy.insert(img, add_position, img[add_position])
-                new_img = numpy.insert(new_img, add_position, new_img[add_position])
-                adjust_list.append(add_position)
-        elif bar < bar_contrast:
-            for i in range(len(white_bar)):
-                if white_bar[i] > bar:
-                    sub_position = white_bar[i - 1]
-            for i in range(bar_contrast - bar):
-                img = numpy.delete(img, sub_position)
-                new_img = numpy.delete(new_img, sub_position)
-                adjust_list.append(-1 * sub_position)
-    adjust_ending = img.shape[0] - img_Contrast.shape[0]
-    if adjust_ending > 0:
-        img = img[:img.shape[0] + adjust_ending]
-        new_img = new_img[:img.shape[0] + adjust_ending]
+    for b_i in range(len(black_bar)):
+        bar = black_bar[b_i]
+        bar_contrast = black_bar_Contrast[b_i]
+        for w_i in range(len(white_bar)):
+            if white_bar[w_i][0] < bar:
+                adjust_position = white_bar[w_i - 1]
+        adjust_list.append([adjust_position,bar - bar_contrast])
+    return adjust_list
+
+
+def transfer(img, new_img, white_bar, adjust_list, img_contrast):
+    for ad_i in range(len(adjust_list)):
+        adjust_num = adjust_list[ad_i][1]
+        ad_list = []
+        for w_i in white_bar:
+            if white_bar[w_i][0] > adjust_list[ad_i][0][1] or white_bar[w_i][1] < adjust_list[ad_i][0][0]:
+                ad_list.append(white_bar[w_i])
+        if len(ad_list) > 0:
+            if adjust_num < 0:
+                # add_pxl
+                for n_add_pxl in range(-adjust_num):
+                    x_white_bar = n_add_pxl % len(ad_list)
+                    position = int((ad_list[x_white_bar][0] + ad_list[x_white_bar][1]) / 2)
+                    numpy.insert(img, position, img[position])
+                    numpy.insert(new_img, position, new_img[position])
+            if adjust_num > 0:
+                for n_sub_pxl in range(adjust_num):
+                    x_white_bar = n_sub_pxl % len(ad_list)
+                    position = int((ad_list[x_white_bar][0] + ad_list[x_white_bar][1]) / 2)
+                    numpy.delete(img, position)
+                    numpy.delete(new_img, position)
+                    if new_img[position + 1] > 0 and new_img[position - 1] > 0:
+                        ad_list = numpy.asarray(ad_list)
+                        numpy.delete(ad_list, x_white_bar)
+                        if len(ad_list) == 0 and ad_i + 1 < len(adjust_list):
+                            adjust_list[ad_i + 1][0][2] = (adjust_num + n_sub_pxl - 1)
+                            break
+        elif ad_i + 1 < len(adjust_list):
+            adjust_list[ad_i + 1][0][2] = (adjust_num + adjust_num)
+
+    if img_contrast.shape[0] - img.shape[0] > 0:
+        for i in range(img_contrast.shape[0] - img.shape[0]):
+            numpy.insert(img, -1, img[-1])
     else:
-        while adjust_ending < 0:
-            img = numpy.insert(img, -1, img[-1])
-            new_img = numpy.insert(new_img, -1, new_img[-1])
-            adjust_ending += 1
+        for i in range(img.shape[0] - img_contrast.shape[0]):
+            numpy.delete(img, -1)
 
-    adjust_position = adjust_list, adjust_ending
-    return img, new_img, adjust_position
-
-
-
-
-
-
-
-def transfer(img,new_img, adjust_position):
-    adjust_list, adjust_ending = adjust_position
-    for i in adjust_list:
-        if i > 0:
-            if new_img[i]==0:
-                pass
-            img = numpy.insert(img, i, img[i])
-        if i < 0:
-            if new_img[i] == 0:
-                pass
-            new_img = numpy.delete(new_img, -1 * i)
-    if adjust_ending > 0:
-        img = img[:img.shape[0] + adjust_ending]
-    elif adjust_ending==0:
-        pass
-    else:
-        while adjust_ending < 0:
-            img = numpy.insert(img, -1, img[-1])
-            adjust_ending += 1
-    return img
+    return img, new_img
 
 
 def find_range(img, low_threshold=0.977, high_threshold=1.0249):
@@ -167,8 +155,9 @@ img = numpy.mean(img, axis=1)
 points = find_range(img)
 new_img = padding(img, points)
 white_bar_, black_bar_ = find_bars(new_img)
-img, new_img = Adjusting_length(img, new_img, img_Contrast)
-img, new_img, adjust_list = Adjusting_bar(img, new_img, black_bar_, white_bar_, black_bar, img_Contrast)
+
+adjust_list=Adjusting_bar(black_bar, white_bar, black_bar_)
+img, new_img=transfer(img, new_img, white_bar, adjust_list, img_Contrast)
 new_img = img.reshape(new_img.shape[0], 1)
 new_img = numpy.repeat(new_img, 35, axis=1)
 cv2.imwrite(img_name, new_img)
