@@ -54,6 +54,7 @@ def Adjusting_bar(black_bar, white_bar, black_bar_Contrast):
     for b_i in range(len(black_bar)):
         bar = black_bar[b_i]
         bar_contrast = black_bar_Contrast[b_i]
+        adjust_position = []
         for w_i in range(len(white_bar)):
             if white_bar[w_i][0] < bar:
                 adjust_position = white_bar[w_i - 1]
@@ -82,7 +83,7 @@ def transfer(img, new_img, white_bar, adjust_list, img_contrast):
                     position = int((ad_list[x_white_bar][0] + ad_list[x_white_bar][1]) / 2)
                     numpy.delete(img, position)
                     numpy.delete(new_img, position)
-                    if new_img[position + 1] > 0 and new_img[position - 1] > 0:
+                    if new_img[position + 1] == 0 and new_img[position - 1] == 0:
                         ad_list = numpy.asarray(ad_list)
                         numpy.delete(ad_list, x_white_bar)
                         if len(ad_list) == 0 and ad_i + 1 < len(adjust_list):
@@ -138,13 +139,14 @@ img_name = 'in.jpg'
 output_path = 'output'
 img = cv2.imread(os.path.join(img_path, img_name))
 img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+width=img.shape[1]
 img = numpy.mean(img, axis=1)
 points = find_range(img)
 new_img = padding(img, points)
 white_bar, black_bar = find_bars(new_img)
 img_Contrast = img
 new_img = img.reshape(new_img.shape[0], 1)
-new_img = numpy.repeat(new_img, 35, axis=1)
+new_img = numpy.repeat(new_img, width, axis=1)
 cv2.imwrite(img_name, new_img)
 
 img_path = 'cjl/1'
@@ -159,5 +161,5 @@ white_bar_, black_bar_ = find_bars(new_img)
 adjust_list=Adjusting_bar(black_bar, white_bar, black_bar_)
 img, new_img=transfer(img, new_img, white_bar, adjust_list, img_Contrast)
 new_img = img.reshape(new_img.shape[0], 1)
-new_img = numpy.repeat(new_img, 35, axis=1)
+new_img = numpy.repeat(new_img, width, axis=1)
 cv2.imwrite(img_name, new_img)
