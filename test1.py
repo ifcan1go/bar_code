@@ -2,6 +2,7 @@
 import cv2
 import numpy
 import os
+import copy
 
 
 def find_bars(img):
@@ -25,86 +26,118 @@ def find_bars(img):
     return numpy.asarray(white_bar), numpy.asarray(black_bar)
 
 
-# def Adjusting_length(img, new_img, img_Contrast):
-#     constrast_length = img_Contrast.shape[0]
-#     img_length = img.shape[0]
-#     if constrast_length == img_length:
-#         return img, new_img
-#     elif img_length > constrast_length:
-#         sub_length = img_length - constrast_length
-#         for i in range(sub_length):
-#             sub_position = int((sub_length - i - 1) * img_length / (img_length - constrast_length))
-#             while new_img[sub_position] == 0:
-#                 sub_position += 1
-#             img = numpy.delete(img, sub_position)
-#             new_img = numpy.delete(new_img, sub_position)
-#     elif img_length < constrast_length:
-#         add_length = constrast_length - img_length
-#         for i in range(add_length):
-#             add_position = int(i * img_length / (constrast_length - img_length))
-#             img = numpy.insert(img, add_position, img[add_position])
-#             new_img = numpy.insert(new_img, add_position, new_img[add_position])
-#     return img, new_img
-
-
 def Adjusting_bar(black_bar, white_bar, black_bar_Contrast):
     if not len(black_bar) == len(black_bar_Contrast):
         raise ("BAR Detective ERROR")
     adjust_list = []
+    distance_acc = 0
     for b_i in range(len(black_bar)):
         bar = black_bar[b_i]
         bar_contrast = black_bar_Contrast[b_i]
         adjust_position = []
         for w_i in range(len(white_bar)):
-            if white_bar[w_i][0] < bar:
-                adjust_position = white_bar[w_i - 1]
-        adjust_list.append([adjust_position,bar - bar_contrast])
+            if white_bar[w_i][1] < bar_contrast:
+                adjust_position = white_bar[w_i]
+        distance = bar_contrast - bar - distance_acc
+        distance_acc += distance
+        adjust_list.append([adjust_position, distance])
     return adjust_list
 
 
-def transfer(img, new_img, white_bar, adjust_list, img_contrast):
+def transfer(img, new_img, adjust_list_save, length):
+    adjust_list = copy.deepcopy(adjust_list_save)
     for ad_i in range(len(adjust_list)):
         adjust_num = adjust_list[ad_i][1]
         ad_list = []
-        for w_i in white_bar:
-            if white_bar[w_i][0] > adjust_list[ad_i][0][1] or white_bar[w_i][1] < adjust_list[ad_i][0][0]:
+        white_bar, black_bar = find_bars(new_img)
+        for w_i in range(len(white_bar)):
+            if (white_bar[w_i][0] >= adjust_list[ad_i][0][0] and white_bar[w_i][0] <= adjust_list[ad_i][0][1]) or (
+                    white_bar[w_i][1] >= adjust_list[ad_i][0][0] and white_bar[w_i][1] <= adjust_list[ad_i][0][1]):
                 ad_list.append(white_bar[w_i])
+        # print(adjust_list[ad_i][0][0], adjust_list[ad_i][0][1], ad_list, adjust_num, new_img.shape)
         if len(ad_list) > 0:
+            ad_list = numpy.asarray(ad_list)
             if adjust_num < 0:
                 # add_pxl
                 for n_add_pxl in range(-adjust_num):
                     x_white_bar = n_add_pxl % len(ad_list)
                     position = int((ad_list[x_white_bar][0] + ad_list[x_white_bar][1]) / 2)
-                    numpy.insert(img, position, img[position])
-                    numpy.insert(new_img, position, new_img[position])
-            if adjust_num > 0:
+                    # print(n_add_pxl, adjust_num, ad_list[x_white_bar][0], ad_list[x_white_bar][1])
+
+                    img = numpy.insert(img, position, img[position])
+                    new_img = numpy.insert(new_img, position, new_img[position])
+                    for i_ad_list in range(x_white_bar, ad_list.shape[0]):
+                        if i_ad_list == x_white_bar:
+                            ad_list[i_ad_list][1] += 1
+                        elif i_ad_list > x_white_bar:
+                            ad_list[i_ad_list][0] += 1
+                            ad_list[i_ad_list][1] += 1
+
+            elif adjust_num > 0:
+                # delete_pxl
                 for n_sub_pxl in range(adjust_num):
                     x_white_bar = n_sub_pxl % len(ad_list)
                     position = int((ad_list[x_white_bar][0] + ad_list[x_white_bar][1]) / 2)
-                    numpy.delete(img, position)
-                    numpy.delete(new_img, position)
-                    if new_img[position + 1] == 0 and new_img[position - 1] == 0:
-                        ad_list = numpy.asarray(ad_list)
-                        numpy.delete(ad_list, x_white_bar)
-                        if len(ad_list) == 0 and ad_i + 1 < len(adjust_list):
-                            adjust_list[ad_i + 1][0][2] = (adjust_num + n_sub_pxl - 1)
-                            break
-        elif ad_i + 1 < len(adjust_list):
+                    # print(n_sub_pxl, adjust_num, ad_list[x_white_bar][0], ad_list[x_white_bar][1])
+                    img = numpy.delete(img, position)
+                    new_img = numpy.delete(new_img, position)
+                    for i_ad_list in range(x_white_bar, ad_list.shape[0]):
+                        if i_ad_list == x_white_bar:
+                            ad_list[i_ad_list][1] -= 1
+                            if ad_list[i_ad_list][0] + 1 == ad_list[i_ad_list][1]:
+                                ad_list = numpy.delete(ad_list, x_white_bar,axis=0)
+                                if len(ad_list) == 0 and ad_i + 1 < len(adjust_list):
+                                    adjust_list[ad_i + 1][0][2] = (adjust_num + n_sub_pxl - 1)
+                                    break
+                        elif i_ad_list > x_white_bar and i_ad_list<ad_list.shape[0]:
+                                ad_list[i_ad_list][0] -= 1
+                                ad_list[i_ad_list][1] -= 1
+                        ad_list = numpy.where(ad_list < 0, 0, ad_list)
+            for adjust_list_i in range(len(adjust_list)):
+                adjust_list[adjust_list_i][0][0] -= adjust_num
+                if adjust_list[adjust_list_i][0][0] < 0:
+                    adjust_list[adjust_list_i][0][0] = 0
+                adjust_list[adjust_list_i][0][1] -= adjust_num
+                if adjust_list[adjust_list_i][0][1] < 0:
+                    adjust_list[adjust_list_i][0][1] = 0
+        elif ad_i + 1 < len(adjust_list) and len(adjust_list) < ad_i + 1:
             adjust_list[ad_i + 1][0][2] = (adjust_num + adjust_num)
 
-    if img_contrast.shape[0] - img.shape[0] > 0:
-        for i in range(img_contrast.shape[0] - img.shape[0]):
-            numpy.insert(img, -1, img[-1])
+    if length - img.shape[0] > 0:
+        for i in range(length - img.shape[0]):
+            img = numpy.insert(img, -1, img[-1])
+            new_img = numpy.insert(new_img, -1, img[-1])
     else:
-        for i in range(img.shape[0] - img_contrast.shape[0]):
-            numpy.delete(img, -1)
+        del_sub_white_num=0
+        white_bar, black_bar = find_bars(new_img)
+        for i in range(img.shape[0] - length):
+            if new_img[-1]>0:
+                img = numpy.delete(img, -1)
+                new_img = numpy.delete(new_img, -1)
+            else:
+                for white_bar_i in range(white_bar.shape[0]):
+                    if white_bar[white_bar_i].shape[0]==1:
+                        white_bar=numpy.delete(white_bar,white_bar_i,axis=0)
+                x_white_bar = del_sub_white_num % len(white_bar)
+                position = int((white_bar[x_white_bar][0] + white_bar[x_white_bar][1]) / 2)
+                img = numpy.delete(img, position)
+                new_img = numpy.delete(new_img, position)
+                for i_white_bar in range(x_white_bar, white_bar.shape[0]):
+                    if i_white_bar == x_white_bar:
+                        white_bar[i_white_bar][1] -= 1
+                    elif i_white_bar > x_white_bar and i_white_bar < white_bar.shape[0]:
+                        white_bar[i_white_bar][0] -= 1
+                        white_bar[i_white_bar][1] -= 1
+
+
 
     return img, new_img
 
 
 def find_range(img, low_threshold=0.977, high_threshold=1.0249):
-    img_use = numpy.where(img[1:] / img[:-1] > high_threshold, 1, 0)
-    img_use += numpy.where(img[1:] / img[:-1] < low_threshold, -1, 0)
+    img_=numpy.where(img==0,1,img)
+    img_use = numpy.where(img_[1:] / (img_[:-1] + 1) > high_threshold, 1, 0)
+    img_use += numpy.where(img_[1:] / (img_[:-1] + 1) < low_threshold, -1, 0)
     points = []
     state = 1
     for i, u in enumerate(img_use):
@@ -134,32 +167,55 @@ def padding(img, points):
     return new_img
 
 
-img_path = 'cjl/1'
-img_name = 'in.jpg'
-output_path = 'output'
-img = cv2.imread(os.path.join(img_path, img_name))
-img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-width=img.shape[1]
-img = numpy.mean(img, axis=1)
-points = find_range(img)
-new_img = padding(img, points)
-white_bar, black_bar = find_bars(new_img)
-img_Contrast = img
-new_img = img.reshape(new_img.shape[0], 1)
-new_img = numpy.repeat(new_img, width, axis=1)
-cv2.imwrite(img_name, new_img)
+def load_pic(img_path, img_name):
+    img = cv2.imread(os.path.join(img_path, img_name))
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    width = img.shape[1]
+    length = img.shape[0]
+    img = numpy.mean(img, axis=1)
+    return img, length, width
 
-img_path = 'cjl/1'
-img_name = 'ad.jpg'
-img = cv2.imread(os.path.join(img_path, img_name))
-img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-img = numpy.mean(img, axis=1)
-points = find_range(img)
-new_img = padding(img, points)
-white_bar_, black_bar_ = find_bars(new_img)
 
-adjust_list=Adjusting_bar(black_bar, white_bar, black_bar_)
-img, new_img=transfer(img, new_img, white_bar, adjust_list, img_Contrast)
-new_img = img.reshape(new_img.shape[0], 1)
-new_img = numpy.repeat(new_img, width, axis=1)
-cv2.imwrite(img_name, new_img)
+def save_pic(img, output_path, width, img_name):
+    new_img = img.reshape(img.shape[0], 1)
+    new_img = numpy.repeat(new_img, width, axis=1)
+    cv2.imwrite(os.path.join(output_path, img_name), new_img)
+
+
+def compare_in_out(mark_in_name, mark_out_name, img_path='pic', output_path='output'):
+    img, _, width = load_pic(img_path, mark_out_name)
+    points = find_range(img)
+    binary_img = padding(img, points)
+    _, black_bar_out = find_bars(binary_img)
+    save_pic(img, output_path, width, mark_out_name)
+    img, length, width = load_pic(img_path, mark_in_name)
+    points = find_range(img)
+    binary_img = padding(img, points)
+
+    white_bar_in, black_bar_in = find_bars(binary_img)
+    adjust_list_save = Adjusting_bar(black_bar_out, white_bar_in, black_bar_in)
+    adjust_list = copy.deepcopy(adjust_list_save)
+    img, binary_img = transfer(img, binary_img, adjust_list, length)
+    save_pic(img, output_path, width, mark_in_name)
+
+    return adjust_list_save, length, width
+
+
+def process_img(adjust_list_save, img_name, img_path='pic', output_path='output'):
+    img, _, _ = load_pic(img_path, img_name)
+    points = find_range(img)
+    binary_img = padding(img, points)
+    img, binary_img = transfer(img, binary_img, adjust_list_save, length)
+    save_pic(img, output_path, width, img_name)
+    save_pic(binary_img, output_path, width, 'binary_img_' + img_name)
+
+
+adjust_list_save, length, width = compare_in_out(mark_in_name='out.jpg', mark_out_name='in.jpg')
+# process_img(adjust_list_save, 'test1.jpg')
+# process_img(adjust_list_save, 'test2.jpg')
+img, _, width = load_pic('cjl/2', 'in.jpg')
+points = find_range(img)
+binary_img = padding(img, points)
+_, black_bar_out = find_bars(binary_img)
+save_pic(binary_img, 'output', width, '2.jpg')
+
