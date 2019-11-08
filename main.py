@@ -3,6 +3,7 @@ import cv2
 import numpy
 import os
 import copy
+import argparse
 
 
 def find_bars(img):
@@ -166,12 +167,14 @@ def load_pic(img_path, img_name):
     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     width = img.shape[1]
     length = img.shape[0]
+    img = numpy.mean(img, axis=1)
     return img, length, width
 
 
 def save_pic(img, output_path, width, img_name):
     new_img = img.reshape(img.shape[0], 1)
     new_img = numpy.repeat(new_img, width, axis=1)
+    print(img_name)
     cv2.imwrite(os.path.join(output_path, img_name), new_img)
 
 
@@ -200,16 +203,26 @@ def process_img(img_name, img_path='pic', output_path='output', adjust_list_save
     binary_img = padding(img, points)
     img, binary_img = transfer(img, binary_img, adjust_list, length)
     save_pic(img, output_path, width, img_name)
-    save_pic(binary_img, output_path, width, 'binary_img_' + img_name)
 
 
 if __name__ == '__main__':
-    low_threshold = 0.977
-    high_threshold = 1.0249
-    img_name = ''
-    img_path = ''
-    output_path = ''
-    mark_in_name = ''
-    mark_out_name = ''
-    process_img(img_name, img_path='pic', output_path='output', mark_in_name=mark_in_name, mark_out_name=mark_out_name,
+    parser = argparse.ArgumentParser()
+    parser.description = 'please enter seven parameter'
+    parser.add_argument("-low", help="this is parameter low_threshold", type=float, default="0.977")
+    parser.add_argument("-high", help="this is parameter high_threshold", type=float, default="1.0249")
+    parser.add_argument("-img_name", help="this is parameter img_name", type=str, default="1.jpg")
+    parser.add_argument("-img_path", help="this is parameter img_path", type=str, default="pic")
+    parser.add_argument("-output_path", help="this is parameter output_path", type=str, default="output")
+    parser.add_argument("-mark_in_name", help="this is parameter mark_in_name", type=str, default="in.jpg")
+    parser.add_argument("-mark_out_name", help="this is parameter mark_out_name", type=str, default="out.jpg")
+    args = parser.parse_args()
+    img_name = args.img_name
+    img_path = args.img_path
+    output_path = args.output_path
+    mark_in_name = args.mark_in_name
+    mark_out_name = args.mark_out_name
+    low_threshold = args.low
+    high_threshold = args.high
+    process_img(img_name=img_name, img_path=img_path, output_path=output_path, mark_in_name=mark_in_name,
+                mark_out_name=mark_out_name,
                 low_threshold=low_threshold, high_threshold=high_threshold)
