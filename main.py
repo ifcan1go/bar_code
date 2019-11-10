@@ -210,11 +210,11 @@ if __name__ == '__main__':
     parser.description = 'please enter seven parameter'
     parser.add_argument("-low", help="this is parameter low_threshold", type=float, default="0.977")
     parser.add_argument("-high", help="this is parameter high_threshold", type=float, default="1.0249")
-    parser.add_argument("-img_name", help="this is parameter img_name", type=str, default="1.jpg")
-    parser.add_argument("-img_path", help="this is parameter img_path", type=str, default="pic")
+    parser.add_argument("-img_name", help="this is parameter img_name", type=str, default="pic/1.jpg")
+    parser.add_argument("-img_path", help="this is parameter img_path", type=str, default="")
     parser.add_argument("-output_path", help="this is parameter output_path", type=str, default="output")
-    parser.add_argument("-mark_in_name", help="this is parameter mark_in_name", type=str, default="in.jpg")
-    parser.add_argument("-mark_out_name", help="this is parameter mark_out_name", type=str, default="out.jpg")
+    parser.add_argument("-mark_in_name", help="this is parameter mark_in_name", type=str, default="pic/in.jpg")
+    parser.add_argument("-mark_out_name", help="this is parameter mark_out_name", type=str, default="pic/out.jpg")
     args = parser.parse_args()
     img_name = args.img_name
     img_path = args.img_path
