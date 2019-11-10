@@ -1,6 +1,7 @@
 # bar_code
 require
-
+operncv
+pip install opencv-python
 run
 运行main.py对图片进行处理
 共需要7个参数
