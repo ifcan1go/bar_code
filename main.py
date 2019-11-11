@@ -7,6 +7,11 @@ import argparse
 
 
 def find_bars(img):
+    '''
+    根据已有的黑白binary_img寻找黑条
+    :param img: binary_img
+    :return:
+    '''
     black_bar = []
     white_bar = []
     w_b = 0
@@ -28,6 +33,13 @@ def find_bars(img):
 
 
 def Adjusting_bar(black_bar, white_bar, black_bar_Contrast):
+    '''
+    根据内标外标黑条位置对比生成调整列表
+    :param black_bar: 内标黑条
+    :param white_bar: 内标白条
+    :param black_bar_Contrast:外标黑条
+    :return: adjust_list需调整的列表
+    '''
     if not len(black_bar) == len(black_bar_Contrast):
         raise ("BAR Detective ERROR")
     adjust_list = []
@@ -46,6 +58,14 @@ def Adjusting_bar(black_bar, white_bar, black_bar_Contrast):
 
 
 def transfer(img, new_img, adjust_list_save, length):
+    '''
+    根据adjust_list，将图标调整变形
+    :param img: 输入的图片
+    :param new_img: 即黑白图片binary_img
+    :param adjust_list_save: 保存的调整列表
+    :param length: 图片的长度
+    :return: img调整好的图片，new_img调整好的黑白图片binary_img
+    '''
     adjust_list = copy.deepcopy(adjust_list_save)
     for ad_i in range(len(adjust_list)):
         adjust_num = adjust_list[ad_i][1]
@@ -130,6 +150,13 @@ def transfer(img, new_img, adjust_list_save, length):
 
 
 def find_range(img, low_threshold=0.977, high_threshold=1.0249):
+    '''
+    识别图片的黑白的边缘
+    :param img: 图片
+    :param low_threshold:低阈值
+    :param high_threshold: 高阈值
+    :return: 黑边变换的边缘节点
+    '''
     img = numpy.where(img == 0, 1, img)
     img_use = numpy.where(img[1:] / (img[:-1]) > high_threshold, 1, 0)
     img_use += numpy.where(img[1:] / (img[:-1]) < low_threshold, -1, 0)
@@ -147,6 +174,12 @@ def find_range(img, low_threshold=0.977, high_threshold=1.0249):
 
 
 def padding(img, points):
+    '''
+    根据边缘节点points，填充黑白色
+    :param img: 图片
+    :param points: 边缘节点
+    :return:
+    '''
     range_begin = 0
     new_img = numpy.ones(img.shape) * 255.
     img_range = []
@@ -163,6 +196,12 @@ def padding(img, points):
 
 
 def load_pic(img_path, img_name):
+    '''
+    读取图片
+    :param img_path:图片路径
+    :param img_name: 图片文件名
+    :return:
+    '''
     img = cv2.imread(os.path.join(img_path, img_name))
     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     width = img.shape[1]
@@ -172,6 +211,14 @@ def load_pic(img_path, img_name):
 
 
 def save_pic(img, output_path, width, img_name):
+    '''
+    保存图片
+    :param img:图片矩阵
+    :param output_path:保存路径
+    :param width: 图片宽度
+    :param img_name: 保存文件名
+    :return:
+    '''
     img_name=img_name.split('/')[-1]
     new_img = img.reshape(img.shape[0], 1)
     new_img = numpy.repeat(new_img, width, axis=1)
@@ -179,7 +226,15 @@ def save_pic(img, output_path, width, img_name):
 
 
 def compare_in_out(mark_in_name, mark_out_name, low_threshold, high_threshold, img_path='pic'):
-
+    '''
+    对比内外表图片
+    :param mark_in_name:内标
+    :param mark_out_name: 外标
+    :param low_threshold: 低阈值
+    :param high_threshold: 高阈值
+    :param img_path: 图片路径
+    :return: 调整列表，图片跨度，长度
+    '''
     img, _, width = load_pic(img_path, mark_out_name)
     points_out = find_range(img, low_threshold, high_threshold)
     binary_img_out = padding(img, points_out)
@@ -195,6 +250,18 @@ def compare_in_out(mark_in_name, mark_out_name, low_threshold, high_threshold, i
 
 def process_img(img_name, img_path='pic', output_path='output', adjust_list_save=None, mark_in_name=None,
                 mark_out_name=None, low_threshold=0.977, high_threshold=1.0249):
+    '''
+    根据调整列表对图片进行处理并保存处理好的图片
+    :param img_name: 图片文件名
+    :param img_path: 图片路径
+    :param output_path: 保存路径
+    :param adjust_list_save:调整列表
+    :param mark_in_name: 内标文件名
+    :param mark_out_name: 外标文件名
+    :param low_threshold: 低阈值
+    :param high_threshold: 高阈值
+    :return:
+    '''
     if adjust_list_save is None:
         adjust_list_save, length, width = compare_in_out(mark_in_name, mark_out_name, img_path=img_path,
                                                          low_threshold=low_threshold, high_threshold=high_threshold)
