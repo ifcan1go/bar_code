@@ -172,13 +172,14 @@ def load_pic(img_path, img_name):
 
 
 def save_pic(img, output_path, width, img_name):
+    img_name=img_name.split('/')[-1]
     new_img = img.reshape(img.shape[0], 1)
     new_img = numpy.repeat(new_img, width, axis=1)
-    print(img_name)
     cv2.imwrite(os.path.join(output_path, img_name), new_img)
 
 
 def compare_in_out(mark_in_name, mark_out_name, low_threshold, high_threshold, img_path='pic'):
+
     img, _, width = load_pic(img_path, mark_out_name)
     points_out = find_range(img, low_threshold, high_threshold)
     binary_img_out = padding(img, points_out)
@@ -195,7 +196,7 @@ def compare_in_out(mark_in_name, mark_out_name, low_threshold, high_threshold, i
 def process_img(img_name, img_path='pic', output_path='output', adjust_list_save=None, mark_in_name=None,
                 mark_out_name=None, low_threshold=0.977, high_threshold=1.0249):
     if adjust_list_save is None:
-        adjust_list_save, length, width = compare_in_out(mark_in_name, mark_out_name, img_path='pic',
+        adjust_list_save, length, width = compare_in_out(mark_in_name, mark_out_name, img_path=img_path,
                                                          low_threshold=low_threshold, high_threshold=high_threshold)
     adjust_list = copy.deepcopy(adjust_list_save)
     img, length, width = load_pic(img_path, img_name)
@@ -210,11 +211,11 @@ if __name__ == '__main__':
     parser.description = 'please enter seven parameter'
     parser.add_argument("-low", help="this is parameter low_threshold", type=float, default="0.977")
     parser.add_argument("-high", help="this is parameter high_threshold", type=float, default="1.0249")
-    parser.add_argument("-img_name", help="this is parameter img_name", type=str, default="1.jpg")
-    parser.add_argument("-img_path", help="this is parameter img_path", type=str, default="pic")
+    parser.add_argument("-img_name", help="this is parameter img_name", type=str, default="pic/1.jpg")
+    parser.add_argument("-img_path", help="this is parameter img_path", type=str, default="")
     parser.add_argument("-output_path", help="this is parameter output_path", type=str, default="output")
-    parser.add_argument("-mark_in_name", help="this is parameter mark_in_name", type=str, default="in.jpg")
-    parser.add_argument("-mark_out_name", help="this is parameter mark_out_name", type=str, default="out.jpg")
+    parser.add_argument("-mark_in_name", help="this is parameter mark_in_name", type=str, default="pic/in.jpg")
+    parser.add_argument("-mark_out_name", help="this is parameter mark_out_name", type=str, default="pic/out.jpg")
     args = parser.parse_args()
     img_name = args.img_name
     img_path = args.img_path
