@@ -1,7 +1,7 @@
 # bar_code
 require
 
-operncv
+opencv
 
 pip install opencv-python
 
